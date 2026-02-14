@@ -25,13 +25,15 @@ def test_valid_promo_code(driver):
     home.add_product_to_cart("Cucumber")
     home.go_to_cart()
 
+    # сначала сохраним оригинальную цену
+    original_price = cart.get_total_amount()
+
     cart.apply_promo_code("rahulshettyacademy")
     msg = cart.get_promo_message()
-    assert "Code applied" in msg
+    assert "Code applied" in msg or "Applied" in msg, f"Unexpected promo message: {msg}"
 
-    original_price = cart.get_total_amount()
     discount_price = cart.get_discount_amount()
-    assert discount_price < original_price, "Discount wasn't used"
+    assert discount_price < original_price, f"Discount wasn't applied (orig {original_price} <= discount {discount_price})"
 
 @pytest.mark.regression
 def test_cross_browser_sanity(driver):
@@ -70,6 +72,8 @@ def test_invalid_promo_code(driver):
     msg = cart.get_promo_message()
     assert "Invalid code" in msg
 
+from selenium.common.exceptions import TimeoutException
+
 @pytest.mark.negative
 def test_search_negative(driver):
     home = HomePage(driver)
@@ -79,8 +83,25 @@ def test_search_negative(driver):
 
     try:
         results = home.get_product_names()
-        assert results == 0, "Products shouldn't be found, but they're found"
-    except:
-        #in case it's not found via timeout, count as pass
+        if isinstance(results, (list, tuple)):
+            assert len(results) == 0, f"Products shouldn't be found, but found: {results}"
+        else:
+            # None or empty is acceptable
+            assert not results, f"Unexpected non-list search result: {results}"
+    except TimeoutException:
         pass
+
+@pytest.mark.negative
+def test_checkout_without_items_negative(driver):
+    """
+    Negative: attempt checkout with empty cart
+    """
+    home = HomePage(driver)
+    cart = CartPage(driver)
+
+    home.load()
+    home.go_to_cart()
+
+    total = cart.get_total_amount()
+    assert total == 0, f"Expected cart total 0 for empty cart, got {total}"
 
