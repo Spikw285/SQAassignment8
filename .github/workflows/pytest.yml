@@ -33,7 +33,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-report
-          path: report.html
+          path: reports/report.html
 
       - name: Upload screenshots
         if: always()
